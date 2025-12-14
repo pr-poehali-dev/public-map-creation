@@ -48,6 +48,9 @@ export default function MapView() {
   const [zoom, setZoom] = useState(13);
   const [center, setCenter] = useState({ lat: 55.755826, lng: 37.617300 });
   const [searchQuery, setSearchQuery] = useState('');
+  const [customMapImage, setCustomMapImage] = useState<string | null>(null);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [mapOffset, setMapOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -92,6 +95,25 @@ export default function MapView() {
 
   const handleMouseUp = () => {
     setIsDragging(false);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setCustomMapImage(event.target?.result as string);
+        setShowUploadDialog(false);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveCustomMap = () => {
+    setCustomMapImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   useEffect(() => {
@@ -141,6 +163,13 @@ export default function MapView() {
 
       <div className="absolute top-6 right-6 z-20 flex flex-col gap-3">
         <Button
+          onClick={() => setShowUploadDialog(true)}
+          size="icon"
+          className="w-12 h-12 rounded-full shadow-2xl bg-gradient-to-br from-accent to-orange-600 hover:from-accent/90 hover:to-orange-600/90 text-white border-0"
+        >
+          <Icon name="Image" size={24} />
+        </Button>
+        <Button
           onClick={handleZoomIn}
           size="icon"
           className="w-12 h-12 rounded-full shadow-2xl bg-white hover:bg-gray-50 text-primary border-0"
@@ -169,7 +198,9 @@ export default function MapView() {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         style={{
-          backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%239C92AC\' fill-opacity=\'0.08\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+          backgroundImage: customMapImage ? `url(${customMapImage})` : 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%239C92AC\' fill-opacity=\'0.08\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+          backgroundSize: customMapImage ? 'cover' : 'auto',
+          backgroundPosition: 'center',
         }}
       >
         <div
@@ -238,6 +269,85 @@ export default function MapView() {
                 </div>
               </div>
             </div>
+          </Card>
+        </div>
+      )}
+
+      {showUploadDialog && (
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-30 flex items-center justify-center p-6 animate-fade-in">
+          <Card className="w-full max-w-lg bg-white p-8 animate-scale-in">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">Загрузить карту</h3>
+              <button
+                onClick={() => setShowUploadDialog(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <Icon name="X" size={24} />
+              </button>
+            </div>
+
+            {customMapImage ? (
+              <div className="space-y-4">
+                <div className="relative rounded-xl overflow-hidden border-2 border-gray-200">
+                  <img
+                    src={customMapImage}
+                    alt="Загруженная карта"
+                    className="w-full h-64 object-cover"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <Icon name="RefreshCw" size={18} className="mr-2" />
+                    Изменить
+                  </Button>
+                  <Button
+                    onClick={handleRemoveCustomMap}
+                    variant="outline"
+                    className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Icon name="Trash2" size={18} className="mr-2" />
+                    Удалить
+                  </Button>
+                </div>
+                <Button
+                  onClick={() => setShowUploadDialog(false)}
+                  className="w-full bg-gradient-to-r from-primary to-secondary text-white"
+                >
+                  Применить карту
+                </Button>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-blue-50/50 transition-all group"
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                    <Icon name="Upload" size={40} />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-gray-900 mb-2">
+                      Нажмите для загрузки
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Поддерживаются: JPG, PNG, GIF, WebP
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
           </Card>
         </div>
       )}
